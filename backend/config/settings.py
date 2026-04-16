@@ -7,7 +7,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
+# Railway sets this when public networking is enabled (avoids 400 DisallowedHost if DJANGO_ALLOWED_HOSTS was missed).
+_railway_public = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+if _railway_public and _railway_public not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_public)
+
+# Trust Railway edge for HTTPS / forwarded host (do not enable blindly on untrusted networks).
+if os.getenv("RAILWAY_ENVIRONMENT") or _railway_public:
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -97,10 +111,14 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173",
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if o.strip()
+]
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
