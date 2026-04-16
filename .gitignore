@@ -9,16 +9,20 @@ env/
 *.egg-info/
 .eggs/
 
+# Markdown — keep only repository root README for GitHub
+*.md
+!/README.md
+
 # Django / local DB
 *.sqlite3
 backend/db.sqlite3
 
-# Secrets (use .env.example)
+# Environment files (track only *.env.example templates)
 .env
 .env.*
 !.env.example
-backend/.env
-frontend/.env
+!backend/.env.example
+!frontend/.env.example
 
 # Node
 node_modules/

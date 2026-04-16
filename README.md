@@ -190,7 +190,7 @@ npm run build
 
 ## Deployment Notes
 
-Step-by-step (sign-up through smoke tests): **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Railway (Django + Postgres) + Vercel (Vite UI).
+Railway hosts **Django + Postgres**; Vercel hosts the **Vite** UI. Order: deploy the API and Postgres first, set `CORS_ALLOWED_ORIGINS` to your Vercel origin, then build the frontend with `VITE_API_BASE_URL=https://<railway-host>/api`. Smoke-test `GET /api/health/` on the backend before shipping the UI.
 
 ### Frontend (Vercel)
 
@@ -209,7 +209,7 @@ Step-by-step (sign-up through smoke tests): **[DEPLOYMENT.md](./DEPLOYMENT.md)**
 
 ## Loom Walkthrough Tips
 
-Use `LOOM_WALKTHROUGH_CHECKLIST.md` for a concise demo script:
+Cover these in order:
 
 - user flow
 - route acquisition
