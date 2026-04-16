@@ -190,6 +190,8 @@ npm run build
 
 ## Deployment Notes
 
+Step-by-step (sign-up through smoke tests): **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Railway (Django + Postgres) + Vercel (Vite UI).
+
 ### Frontend (Vercel)
 
 - Root directory: `frontend`
@@ -197,10 +199,10 @@ npm run build
 - Output dir: `dist`
 - Env: `VITE_API_BASE_URL=https://<backend-host>/api`
 
-### Backend (Render/Railway)
+### Backend (Railway)
 
 - Root directory: `backend`
-- Start command: `python manage.py migrate && python manage.py runserver 0.0.0.0:$PORT`
+- Uses `backend/Procfile`: migrations + **Gunicorn** on `$PORT`
 - Set env vars from `backend/.env.example` (prod-safe values)
 - Use managed Postgres and set `DB_BACKEND=postgres`
 - Update CORS and allowed hosts for deployed frontend domain
