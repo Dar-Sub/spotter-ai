@@ -111,13 +111,15 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Browser origins allowed to call the API (scheme + host, no path). Include your Vercel URL in production.
+# Supports the common typo CORS_ALLOWED_ORIGIN (singular): used only if CORS_ALLOWED_ORIGINS is unset.
+_cors_env = os.getenv("CORS_ALLOWED_ORIGINS")
+if not (_cors_env and _cors_env.strip()):
+    _cors_env = os.getenv("CORS_ALLOWED_ORIGIN", "http://localhost:5173,http://127.0.0.1:5173")
+else:
+    _cors_env = _cors_env.strip()
 CORS_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173",
-    ).split(",")
-    if o.strip()
+    o.strip() for o in _cors_env.split(",") if o.strip()
 ]
 
 REST_FRAMEWORK = {
