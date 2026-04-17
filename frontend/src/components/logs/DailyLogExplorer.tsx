@@ -32,16 +32,9 @@ export function DailyLogExplorer({ logs }: DailyLogExplorerProps) {
   }, []);
 
   useEffect(() => {
-    if (!activeLog) {
-      setActiveEntryIndex(null);
-      return;
-    }
-    if (activeLog.log_entries.length) {
-      setActiveEntryIndex(0);
-    } else {
-      setActiveEntryIndex(null);
-    }
-  }, [activeLogIndex]);
+    const log = logs[activeLogIndex];
+    setActiveEntryIndex(log?.log_entries?.length ? 0 : null);
+  }, [activeLogIndex, logs]);
 
   const activeEntry = activeLog?.log_entries[activeEntryIndex ?? -1];
 
