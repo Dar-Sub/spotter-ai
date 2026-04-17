@@ -2,7 +2,8 @@ const assumptions = [
   "Property-carrying driver rules",
   "11h max driving within a 14h duty window",
   "30m break after 8h cumulative driving",
-  "70h cycle cap (simplified static budget for MVP)",
+  "Rolling 70h / 8-day on-duty cap (driving + pickup, drop, fuel)",
+  "Cycle-used hours at plan start are spread evenly across the last eight planner calendar days",
   "Fuel stop inserted at approximately every 1,000 miles",
   "1h pickup and 1h dropoff on-duty service time",
 ];

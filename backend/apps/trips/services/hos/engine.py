@@ -190,10 +190,6 @@ class BasicHOSEngine:
             notes="Dropoff service time",
         )
 
-        warnings.append(
-            "On-duty (driving + ON) is tracked against a rolling 70-hour / 8-calendar-day window in APP_TIMEZONE; "
-            "initial cycle-used is spread evenly across those eight days at trip start.",
-        )
         return TripPlanResult(route=route, stops=stops, duty_segments=duty_segments, warnings=warnings)
 
     def _default_start_time(self) -> datetime:
