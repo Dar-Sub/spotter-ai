@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from decimal import Decimal
 import math
@@ -27,6 +27,7 @@ from apps.trips.constants import (
 )
 from apps.trips.enums import DutyStatus, StopType
 from apps.trips.services.contracts import DutySegmentData, NormalizedRoute, StopData, TripPlanRequest, TripPlanResult
+from apps.trips.services.hos.rolling_cycle import Rolling70Hour8DayWindow
 
 
 @dataclass
@@ -36,7 +37,6 @@ class EngineState:
     shift_driving_minutes: int = 0
     shift_elapsed_minutes: int = 0
     driving_since_break_minutes: int = 0
-    cycle_on_duty_minutes: int = 0
     stop_sequence: int = 1
     day_index: int = 1
     miles_since_last_fuel: Decimal = Decimal("0")
@@ -69,18 +69,26 @@ class BasicHOSEngine:
         stops: list[StopData] = []
 
         start_time = request.start_time or self._default_start_time()
+        tz = ZoneInfo(settings.TIME_ZONE)
+        rolling = Rolling70Hour8DayWindow(
+            tz,
+            start_time,
+            int(float(request.current_cycle_used_hours) * 60),
+        )
+
+        if rolling.window_sum_minutes(start_time) >= MAX_CYCLE_ON_DUTY_MINUTES:
+            warnings.append("Current cycle-used hours already meet/exceed 70-hour / 8-day limit; trip cannot be planned.")
+            return TripPlanResult(route=route, warnings=warnings)
+
         state = EngineState(
             current_time=start_time,
             shift_start_time=start_time,
-            cycle_on_duty_minutes=int(float(request.current_cycle_used_hours) * 60),
         )
 
         pickup_point = route.points[1] if len(route.points) > 2 else route.points[-1]
         dropoff_point = route.points[-1]
 
-        if state.cycle_on_duty_minutes >= MAX_CYCLE_ON_DUTY_MINUTES:
-            warnings.append("Current cycle-used hours already meet/exceed 70-hour limit; trip cannot be planned.")
-            return TripPlanResult(route=route, warnings=warnings)
+        cycle_midnight_waits = 0
 
         for leg in route.legs:
             leg_minutes_remaining = int(leg.duration_minutes)
@@ -88,25 +96,41 @@ class BasicHOSEngine:
             miles_per_min = leg_miles_remaining / Decimal(max(leg_minutes_remaining, 1))
 
             while leg_minutes_remaining > 0:
-                cycle_remaining = MAX_CYCLE_ON_DUTY_MINUTES - state.cycle_on_duty_minutes
-                if cycle_remaining <= 0:
-                    warnings.append("70-hour cycle limit reached before completing route.")
-                    return TripPlanResult(route=route, stops=stops, duty_segments=duty_segments, warnings=warnings)
-
-                chunk_limit = min(
+                prelim = min(
                     leg_minutes_remaining,
                     MAX_DRIVING_PER_SHIFT_MINUTES - state.shift_driving_minutes,
                     MAX_SHIFT_WINDOW_MINUTES - state.shift_elapsed_minutes,
                     BREAK_REQUIRED_AFTER_DRIVING_MINUTES - state.driving_since_break_minutes,
-                    cycle_remaining,
                 )
+                cycle_cap = rolling.max_on_duty_chunk_minutes(state.current_time, prelim)
+                chunk_limit = min(prelim, cycle_cap)
 
                 if chunk_limit <= 0:
+                    if prelim > 0 and cycle_cap <= 0:
+                        cycle_midnight_waits += 1
+                        if cycle_midnight_waits > 14:
+                            warnings.append(
+                                "70-hour / 8-day rolling on-duty window could not free enough capacity "
+                                "within two weeks of off-duty clock advancement; trip aborted.",
+                            )
+                            return TripPlanResult(
+                                route=route,
+                                stops=stops,
+                                duty_segments=duty_segments,
+                                warnings=warnings,
+                            )
+                        self._wait_off_duty_until_local_midnight(
+                            state=state,
+                            stops=stops,
+                            duty_segments=duty_segments,
+                        )
+                        continue
                     self._resolve_zero_capacity(route=route, state=state, stops=stops, duty_segments=duty_segments)
                     continue
 
                 drive_minutes = int(chunk_limit)
                 driven_miles = (miles_per_min * Decimal(drive_minutes)).quantize(Decimal("0.01"))
+                drive_start = state.current_time
                 self._add_duty_segment(
                     duty_segments=duty_segments,
                     state=state,
@@ -114,12 +138,12 @@ class BasicHOSEngine:
                     duration_minutes=drive_minutes,
                     location_context=f"{leg.start_name} -> {leg.end_name}",
                 )
+                rolling.allocate_on_duty_minutes(drive_start, drive_minutes)
                 leg_minutes_remaining -= drive_minutes
                 leg_miles_remaining = max(Decimal("0"), leg_miles_remaining - driven_miles)
                 state.shift_driving_minutes += drive_minutes
                 state.shift_elapsed_minutes += drive_minutes
                 state.driving_since_break_minutes += drive_minutes
-                state.cycle_on_duty_minutes += drive_minutes
                 state.miles_since_last_fuel += driven_miles
                 state.miles_driven_total += driven_miles
 
@@ -129,6 +153,7 @@ class BasicHOSEngine:
                         state=state,
                         stops=stops,
                         duty_segments=duty_segments,
+                        rolling=rolling,
                         stop_type=StopType.FUEL,
                         location_name=f"En route fuel stop near {leg.end_name}",
                         latitude=fuel_lat_lon[0] if fuel_lat_lon else None,
@@ -143,6 +168,7 @@ class BasicHOSEngine:
                     state=state,
                     stops=stops,
                     duty_segments=duty_segments,
+                    rolling=rolling,
                     stop_type=StopType.PICKUP,
                     location_name=leg.end_name,
                     latitude=pickup_point.latitude,
@@ -155,6 +181,7 @@ class BasicHOSEngine:
             state=state,
             stops=stops,
             duty_segments=duty_segments,
+            rolling=rolling,
             stop_type=StopType.DROPOFF,
             location_name=request.dropoff_location,
             latitude=dropoff_point.latitude,
@@ -163,7 +190,10 @@ class BasicHOSEngine:
             notes="Dropoff service time",
         )
 
-        warnings.append("Cycle recap is simplified: 70-hour remaining is treated as a static budget for this MVP.")
+        warnings.append(
+            "On-duty (driving + ON) is tracked against a rolling 70-hour / 8-calendar-day window in APP_TIMEZONE; "
+            "initial cycle-used is spread evenly across those eight days at trip start.",
+        )
         return TripPlanResult(route=route, stops=stops, duty_segments=duty_segments, warnings=warnings)
 
     def _default_start_time(self) -> datetime:
@@ -174,6 +204,31 @@ class BasicHOSEngine:
             hour=DEFAULT_SHIFT_START_HOUR, minute=0, second=0, microsecond=0
         )
         return shift_local.astimezone(dt_timezone.utc)
+
+    def _wait_off_duty_until_local_midnight(
+        self,
+        state: EngineState,
+        stops: list[StopData],
+        duty_segments: list[DutySegmentData],
+    ) -> None:
+        """Advance the clock with off-duty (no 70h accrual) until the next local midnight to roll the 8-day window."""
+        tz = ZoneInfo(settings.TIME_ZONE)
+        t = state.current_time
+        tl = t.astimezone(tz)
+        d = tl.date()
+        next_local_mid = datetime.combine(d + timedelta(days=1), time.min, tzinfo=tz).astimezone(dt_timezone.utc)
+        wait = int((next_local_mid - t).total_seconds() // 60)
+        wait = max(1, wait)
+        self._add_off_duty_stop(
+            state=state,
+            stops=stops,
+            duty_segments=duty_segments,
+            stop_type=StopType.CYCLE_WINDOW_WAIT,
+            duration_minutes=wait,
+            notes="Off duty until local midnight so the oldest day exits the rolling 70-hour / 8-day window",
+            latitude=None,
+            longitude=None,
+        )
 
     def _resolve_zero_capacity(
         self,
@@ -208,10 +263,10 @@ class BasicHOSEngine:
                 stops=stops,
                 duty_segments=duty_segments,
                 stop_type=StopType.BREAK,
-                latitude=stop_lat_lon[0] if stop_lat_lon else None,
-                longitude=stop_lat_lon[1] if stop_lat_lon else None,
                 duration_minutes=BREAK_DURATION_MINUTES,
                 notes="30-minute non-driving break after 8 cumulative driving hours",
+                latitude=stop_lat_lon[0] if stop_lat_lon else None,
+                longitude=stop_lat_lon[1] if stop_lat_lon else None,
             )
             state.shift_elapsed_minutes += BREAK_DURATION_MINUTES
             state.driving_since_break_minutes = 0
@@ -247,6 +302,7 @@ class BasicHOSEngine:
         state: EngineState,
         stops: list[StopData],
         duty_segments: list[DutySegmentData],
+        rolling: Rolling70Hour8DayWindow | None,
         stop_type: str,
         location_name: str,
         duration_minutes: int,
@@ -264,7 +320,8 @@ class BasicHOSEngine:
                 notes=notes,
             )
             state.shift_elapsed_minutes += duration_minutes
-            state.cycle_on_duty_minutes += duration_minutes
+            if rolling is not None:
+                rolling.allocate_on_duty_minutes(start_time, duration_minutes)
         else:
             start_time = end_time = state.current_time
 

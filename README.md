@@ -31,7 +31,7 @@ cd frontend && npm install && npm run dev
 
 **Routing:** `ROUTE_PROVIDER=osrm` (default) or `stub` for offline-safe demo routes.
 
-**Time:** `APP_TIMEZONE` sets Django `TIME_ZONE` — daily log `log_date` and local “midnight” splits use this zone; default trip `start_time` is “today at 06:00” in this zone (UTC on Railway unless you change it). The map/stop timeline formats ISO timestamps with the **browser’s** local timezone, so if that differs from `APP_TIMEZONE`, the **calendar day on a stop** can differ from the **ELD sheet `log_date`** until you align them (same zone in browser settings or future UI work).
+**Time:** `APP_TIMEZONE` sets Django `TIME_ZONE` — daily log `log_date` and local “midnight” splits use this zone; default trip `start_time` is “today at 06:00” in this zone (UTC on Railway unless you change it). The **70-hour / 8-day** rule is modeled as **rolling on-duty (driving + ON) minutes** over the last **eight local calendar days** in that zone; `current_cycle_used_hours` is spread evenly across those eight days at plan start. The map/stop timeline formats ISO timestamps with the **browser’s** local timezone, so if that differs from `APP_TIMEZONE`, the **calendar day on a stop** can differ from the **ELD sheet `log_date`** until you align them (same zone in browser settings or future UI work).
 
 ## API
 

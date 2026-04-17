@@ -15,6 +15,7 @@ class StopType(models.TextChoices):
     FUEL = "fuel", "Fuel"
     BREAK = "break", "Break"
     OVERNIGHT_RESET = "overnight_reset", "Overnight Reset"
+    CYCLE_WINDOW_WAIT = "cycle_window_wait", "Cycle window wait"
 
 
 class DutyStatus(models.TextChoices):

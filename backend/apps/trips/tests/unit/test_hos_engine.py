@@ -77,11 +77,23 @@ def test_very_long_trip_inserts_fuel_stops():
     assert len(fuel_stops) >= 2
 
 
-def test_high_cycle_used_stops_route_when_limit_reached():
+def test_seventy_hours_already_at_cap_cannot_start():
+    engine = BasicHOSEngine()
+    result = engine.simulate(build_request(cycle_used="70.0"), build_route("100.0", 60))
+    assert not result.duty_segments
+    assert any("cannot be planned" in w.lower() for w in result.warnings)
+
+
+def test_tight_cycle_uses_rolling_window_and_may_insert_midnight_waits():
+    """69.5h used leaves little 70h/8-day headroom; engine may insert off-duty to local midnight to roll the window."""
     engine = BasicHOSEngine()
     result = engine.simulate(build_request(cycle_used="69.5"), build_route("600.0", 700))
-
-    assert any("70-hour cycle limit reached" in warning for warning in result.warnings)
+    joined = " ".join(result.warnings).lower()
+    assert "rolling 70-hour" in joined or "8-day" in joined
+    assert result.duty_segments
+    assert any(s.stop_type == StopType.CYCLE_WINDOW_WAIT for s in result.stops) or any(
+        d.segment_type == "driving" for d in result.duty_segments
+    )
 
 
 def test_interpolate_lat_lon_endpoints_and_midpoint():

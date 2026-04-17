@@ -11,6 +11,7 @@ export function StopsTimeline({ trip }: StopsTimelineProps) {
     if (stopType === "fuel") return "bg-amber-500/15 text-amber-300 border-amber-500/30";
     if (stopType === "break") return "bg-violet-500/15 text-violet-300 border-violet-500/30";
     if (stopType === "overnight_reset") return "bg-rose-500/15 text-rose-300 border-rose-500/30";
+    if (stopType === "cycle_window_wait") return "bg-slate-500/15 text-slate-200 border-slate-500/30";
     return "bg-cyan-500/15 text-cyan-300 border-cyan-500/30";
   };
 
