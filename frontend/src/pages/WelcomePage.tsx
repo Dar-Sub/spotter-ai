@@ -68,83 +68,86 @@ function TruckLane({
 
 export function WelcomePage() {
   return (
-    <div className="welcome-motion relative min-h-screen overflow-hidden bg-[#050d14] text-slate-100">
-      {/* Sky & depth — unchanged treatment */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-10%,rgba(34,211,238,0.18),transparent_55%),radial-gradient(ellipse_90%_60%_at_80%_20%,rgba(56,189,248,0.08),transparent_50%)]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 animate-welcome-shimmer bg-[linear-gradient(115deg,transparent_40%,rgba(255,255,255,0.04)_50%,transparent_60%)]"
-        aria-hidden
-      />
+    <div className="welcome-motion relative min-h-screen w-full max-w-full overflow-x-hidden bg-[#050d14] text-slate-100">
+      {/* Scene layer: clips truck transforms so they never widen the document on mobile */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {/* Sky & depth — unchanged treatment */}
+        <div
+          className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-10%,rgba(34,211,238,0.18),transparent_55%),radial-gradient(ellipse_90%_60%_at_80%_20%,rgba(56,189,248,0.08),transparent_50%)]"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 animate-welcome-shimmer bg-[linear-gradient(115deg,transparent_40%,rgba(255,255,255,0.04)_50%,transparent_60%)]"
+          aria-hidden
+        />
 
-      {/* Soft constellation (subtle, above road) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[42vh]" aria-hidden>
-        {SKY_DOTS.map((dot, i) => (
-          <span
-            key={i}
-            className="absolute h-1 w-1 rounded-full bg-cyan-200/80 shadow-[0_0_8px_rgba(34,211,238,0.6)] animate-welcome-shimmer"
-            style={{ top: dot.top, left: dot.left, opacity: dot.opacity, animationDelay: dot.delay }}
-          />
-        ))}
+        {/* Soft constellation (subtle, above road) */}
+        <div className="absolute inset-x-0 top-0 h-[42vh]" aria-hidden>
+          {SKY_DOTS.map((dot, i) => (
+            <span
+              key={i}
+              className="absolute h-1 w-1 rounded-full bg-cyan-200/80 shadow-[0_0_8px_rgba(34,211,238,0.6)] animate-welcome-shimmer"
+              style={{ top: dot.top, left: dot.left, opacity: dot.opacity, animationDelay: dot.delay }}
+            />
+          ))}
+        </div>
+
+        {/* Horizon glow */}
+        <div
+          className="absolute bottom-[38%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent"
+          aria-hidden
+        />
+
+        {/* Road plane */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-[46vh] bg-gradient-to-b from-slate-900 via-slate-950 to-black"
+          style={{ clipPath: "polygon(8% 0, 92% 0, 100% 100%, 0 100%)" }}
+          aria-hidden
+        />
+        {/* Road motion stripes */}
+        <div
+          className="absolute bottom-0 left-[10%] right-[10%] h-[42vh] animate-welcome-road opacity-70"
+          style={{
+            clipPath: "polygon(10% 0, 90% 0, 100% 100%, 0 100%)",
+            backgroundImage:
+              "repeating-linear-gradient(to bottom, transparent 0, transparent 28px, rgba(34,211,238,0.22) 28px, rgba(34,211,238,0.22) 32px, transparent 32px, transparent 60px)",
+            backgroundSize: "100% 96px",
+          }}
+          aria-hidden
+        />
+        <div
+          className="absolute bottom-[6vh] left-1/2 h-1 w-[min(72vw,720px)] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent blur-sm"
+          aria-hidden
+        />
+
+        {/* Moving trucks — horizontal + vertical bob for “live” feel */}
+        <TruckLane motionClass="bottom-[20vh] animate-welcome-truck-a" bobClass="animate-welcome-truck-bob">
+          <TruckIcon className="h-16 w-auto text-cyan-200 drop-shadow-[0_0_20px_rgba(34,211,238,0.45)]" variant="cyan" />
+        </TruckLane>
+        <TruckLane motionClass="bottom-[26vh] animate-welcome-truck-b [animation-delay:-7s]" bobClass="animate-welcome-truck-bob-slow">
+          <TruckIcon className="h-12 w-auto text-slate-200/90 drop-shadow-[0_0_14px_rgba(148,163,184,0.35)]" variant="slate" />
+        </TruckLane>
+        <TruckLane motionClass="bottom-[16vh] animate-welcome-truck-c [animation-delay:-12s]" bobClass="animate-welcome-truck-bob-fast">
+          <TruckIcon className="h-10 w-auto text-cyan-100/85" variant="cyan" />
+        </TruckLane>
+        <TruckLane motionClass="bottom-[22vh] animate-welcome-truck-d [animation-delay:-4s]" bobClass="animate-welcome-truck-bob">
+          <TruckIcon className="h-11 w-auto text-amber-200/90 drop-shadow-[0_0_16px_rgba(251,191,36,0.25)]" variant="amber" />
+        </TruckLane>
+        <TruckLane motionClass="bottom-[18vh] animate-welcome-truck-e [animation-delay:-18s]" bobClass="animate-welcome-truck-bob-slow">
+          <TruckIcon className="h-9 w-auto text-slate-300/80" variant="slate" />
+        </TruckLane>
       </div>
 
-      {/* Horizon glow */}
-      <div
-        className="pointer-events-none absolute bottom-[38%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent"
-        aria-hidden
-      />
-
-      {/* Road plane */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46vh] bg-gradient-to-b from-slate-900 via-slate-950 to-black"
-        style={{ clipPath: "polygon(8% 0, 92% 0, 100% 100%, 0 100%)" }}
-        aria-hidden
-      />
-      {/* Road motion stripes */}
-      <div
-        className="pointer-events-none absolute bottom-0 left-[10%] right-[10%] h-[42vh] animate-welcome-road opacity-70"
-        style={{
-          clipPath: "polygon(10% 0, 90% 0, 100% 100%, 0 100%)",
-          backgroundImage:
-            "repeating-linear-gradient(to bottom, transparent 0, transparent 28px, rgba(34,211,238,0.22) 28px, rgba(34,211,238,0.22) 32px, transparent 32px, transparent 60px)",
-          backgroundSize: "100% 96px",
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute bottom-[6vh] left-1/2 h-1 w-[min(72vw,720px)] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent blur-sm"
-        aria-hidden
-      />
-
-      {/* Moving trucks — horizontal + vertical bob for “live” feel */}
-      <TruckLane motionClass="bottom-[20vh] animate-welcome-truck-a" bobClass="animate-welcome-truck-bob">
-        <TruckIcon className="h-16 w-auto text-cyan-200 drop-shadow-[0_0_20px_rgba(34,211,238,0.45)]" variant="cyan" />
-      </TruckLane>
-      <TruckLane motionClass="bottom-[26vh] animate-welcome-truck-b [animation-delay:-7s]" bobClass="animate-welcome-truck-bob-slow">
-        <TruckIcon className="h-12 w-auto text-slate-200/90 drop-shadow-[0_0_14px_rgba(148,163,184,0.35)]" variant="slate" />
-      </TruckLane>
-      <TruckLane motionClass="bottom-[16vh] animate-welcome-truck-c [animation-delay:-12s]" bobClass="animate-welcome-truck-bob-fast">
-        <TruckIcon className="h-10 w-auto text-cyan-100/85" variant="cyan" />
-      </TruckLane>
-      <TruckLane motionClass="bottom-[22vh] animate-welcome-truck-d [animation-delay:-4s]" bobClass="animate-welcome-truck-bob">
-        <TruckIcon className="h-11 w-auto text-amber-200/90 drop-shadow-[0_0_16px_rgba(251,191,36,0.25)]" variant="amber" />
-      </TruckLane>
-      <TruckLane motionClass="bottom-[18vh] animate-welcome-truck-e [animation-delay:-18s]" bobClass="animate-welcome-truck-bob-slow">
-        <TruckIcon className="h-9 w-auto text-slate-300/80" variant="slate" />
-      </TruckLane>
-
       {/* Foreground */}
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-5 pb-16 pt-14 md:px-10 md:pt-20">
-        <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-8 shadow-[0_28px_90px_-24px_rgba(0,0,0,0.85)] backdrop-blur-xl md:p-11">
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl min-w-0 flex-col px-4 pb-16 pt-14 sm:px-6 md:px-10 md:pt-20">
+        <div className="mx-auto w-full min-w-0 max-w-3xl rounded-[2rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-6 shadow-[0_28px_90px_-24px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-8 md:p-11">
           <p className="text-center text-xs font-semibold uppercase tracking-[0.35em] text-cyan-400/90">
             Spotter Planner
           </p>
-          <h1 className="mx-auto mt-8 max-w-3xl animate-welcome-drift text-center text-4xl font-semibold leading-tight tracking-tight text-white md:text-5xl lg:text-[3.25rem]">
+          <h1 className="mx-auto mt-6 max-w-3xl animate-welcome-drift text-balance text-center text-3xl font-semibold leading-tight tracking-tight text-white sm:mt-8 sm:text-4xl md:text-5xl lg:text-[3.25rem]">
             Welcome: plan routes, respect HOS, and ship ELD-ready logs.
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-base leading-relaxed text-slate-400 md:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-balance text-center text-base leading-relaxed text-slate-400 sm:mt-5 md:text-lg">
             A focused operations workspace for property-carrying runs: geocoded legs, compliance stops, and multi-day
             log sheets: no sign-in required.
           </p>
@@ -163,7 +166,7 @@ export function WelcomePage() {
           <div className="mt-10 flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-8">
             <Link
               to="/planner"
-              className="group relative inline-flex min-w-[220px] items-center justify-center overflow-hidden rounded-2xl border border-cyan-400/30 bg-[length:220%_100%] px-11 py-4 text-center text-base font-semibold text-slate-950 shadow-[0_0_48px_rgba(34,211,238,0.35)] transition duration-300 animate-welcome-cta-shine bg-[linear-gradient(105deg,#22d3ee_0%,#38bdf8_18%,#22d3ee_36%,#0ea5e9_52%,#22d3ee_70%,#67e8f9_88%,#22d3ee_100%)] hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(34,211,238,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
+              className="group relative inline-flex w-full max-w-sm items-center justify-center overflow-hidden rounded-2xl border border-cyan-400/30 bg-[length:220%_100%] px-8 py-4 text-center text-base font-semibold text-slate-950 shadow-[0_0_48px_rgba(34,211,238,0.35)] transition duration-300 animate-welcome-cta-shine bg-[linear-gradient(105deg,#22d3ee_0%,#38bdf8_18%,#22d3ee_36%,#0ea5e9_52%,#22d3ee_70%,#67e8f9_88%,#22d3ee_100%)] hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(34,211,238,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200 sm:w-auto sm:max-w-none sm:px-11"
             >
               <span className="relative z-10 flex items-center gap-2">
                 Continue to planner

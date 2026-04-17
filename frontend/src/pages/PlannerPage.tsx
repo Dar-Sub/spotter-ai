@@ -19,7 +19,7 @@ export function PlannerPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-10 md:px-8">
-      <header className="mb-8 overflow-x-auto text-center [-webkit-overflow-scrolling:touch]">
+      <header className="mb-8 text-center">
         <div className="flex justify-center">
           <Link
             to="/"
@@ -29,11 +29,11 @@ export function PlannerPage() {
           </Link>
         </div>
         <p className="mt-2 text-sm font-medium uppercase tracking-[0.25em] text-cyan-300">Spotter Planner</p>
-        <h1 className="mt-3 whitespace-nowrap text-5xl font-semibold tracking-tight text-white md:text-5xl">
+        <h1 className="mx-auto mt-3 max-w-4xl text-balance text-2xl font-semibold leading-snug tracking-tight text-white sm:text-3xl md:text-4xl">
           Trucking trip planner, HOS compliance, and daily ELD logs
         </h1>
-        <p className="mt-3 whitespace-nowrap text-sm text-slate-300 md:text-base">
-        Plan routes, model FMCSA constraints, and generate production-style driver log artifacts for operations times.
+        <p className="mx-auto mt-3 max-w-2xl text-balance px-1 text-sm leading-relaxed text-slate-300 md:text-base">
+          Plan routes, model FMCSA constraints, and generate production-style driver log artifacts for operations teams.
         </p>
       </header>
 
