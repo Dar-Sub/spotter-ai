@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { PlannerPage } from "./PlannerPage";
@@ -21,7 +22,11 @@ describe("PlannerPage states", () => {
       error: null,
     });
 
-    render(<PlannerPage />);
+    render(
+      <MemoryRouter>
+        <PlannerPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByLabelText("Loading trip results")).toBeInTheDocument();
   });
 
@@ -33,7 +38,11 @@ describe("PlannerPage states", () => {
       error: new Error("network"),
     });
 
-    render(<PlannerPage />);
+    render(
+      <MemoryRouter>
+        <PlannerPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByText(/Unable to generate trip plan/i)).toBeInTheDocument();
   });
 
@@ -60,7 +69,11 @@ describe("PlannerPage states", () => {
       },
     });
 
-    render(<PlannerPage />);
+    render(
+      <MemoryRouter>
+        <PlannerPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByText(/Trip status/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Daily ELD logs" })).toBeInTheDocument();
   });

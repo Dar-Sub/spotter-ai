@@ -20,3 +20,9 @@ body {
     color: #0f172a;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-motion [class*="animate-welcome-"] {
+    animation: none !important;
+  }
+}

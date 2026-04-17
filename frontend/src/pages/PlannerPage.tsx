@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { TripPlannerForm } from "../components/form/TripPlannerForm";
 import { RouteMapPanel } from "../components/map/RouteMapPanel";
 import { StopsTimeline } from "../components/timeline/StopsTimeline";
@@ -18,8 +20,16 @@ export function PlannerPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-10 md:px-8">
       <header className="mb-8 overflow-x-auto text-center [-webkit-overflow-scrolling:touch]">
-        <p className="text-sm font-medium uppercase tracking-[0.25em] text-cyan-300">Spotter Planner</p>
-        <h1 className="mt-3 whitespace-nowrap text-4xl font-semibold tracking-tight text-white md:text-4xl">
+        <div className="flex justify-center">
+          <Link
+            to="/"
+            className="text-xs font-medium text-slate-500 transition hover:text-cyan-400/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500/60"
+          >
+            ← Welcome
+          </Link>
+        </div>
+        <p className="mt-2 text-sm font-medium uppercase tracking-[0.25em] text-cyan-300">Spotter Planner</p>
+        <h1 className="mt-3 whitespace-nowrap text-5xl font-semibold tracking-tight text-white md:text-5xl">
           Trucking trip planner, HOS compliance, and daily ELD logs
         </h1>
         <p className="mt-3 whitespace-nowrap text-sm text-slate-300 md:text-base">

@@ -27,6 +27,8 @@ cp frontend/.env.example frontend/.env   # point VITE_API_BASE_URL at your API, 
 cd frontend && npm install && npm run dev
 ```
 
+**UI routes:** `/` — welcome landing; `/planner` — trip form, map, timeline, and daily logs.
+
 **Database:** `DB_BACKEND=sqlite` (default) or `postgres`. For local Postgres: `docker compose -f docker-compose.postgres.yml up -d` and set the `POSTGRES_*` variables from `backend/.env.example`.
 
 **Routing:** `ROUTE_PROVIDER=osrm` (default) or `stub` for offline-safe demo routes.
