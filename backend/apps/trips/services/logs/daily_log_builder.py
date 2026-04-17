@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from decimal import Decimal
+from zoneinfo import ZoneInfo
+
+from django.conf import settings
+from django.utils import timezone as dj_timezone
 
 from apps.trips.enums import DutyStatus
 from apps.trips.services.contracts import DailyLogData, DailyLogEntryData, DutySegmentData
@@ -25,6 +30,20 @@ class SegmentSlice:
 
 
 class DailyLogBuilder:
+    """Builds daily logs using calendar midnights in Django TIME_ZONE (see APP_TIMEZONE)."""
+
+    def _planning_tz(self) -> ZoneInfo:
+        return ZoneInfo(settings.TIME_ZONE)
+
+    def _day_start_utc(self, log_date: str) -> datetime:
+        d = date.fromisoformat(log_date)
+        return datetime.combine(d, time.min, tzinfo=self._planning_tz()).astimezone(dt_timezone.utc)
+
+    def _ensure_aware_utc(self, dt: datetime) -> datetime:
+        if dj_timezone.is_naive(dt):
+            return dj_timezone.make_aware(dt, dt_timezone.utc)
+        return dt
+
     def build(
         self,
         duty_segments: list[DutySegmentData],
@@ -48,49 +67,51 @@ class DailyLogBuilder:
         logs: list[DailyLogData] = []
         for log_date in sorted(grouped_slices.keys()):
             slices = sorted(grouped_slices[log_date], key=lambda s: s.start_minute)
+            day_start_utc = self._day_start_utc(log_date)
 
             # Ensure the full 24h window is represented by filling gaps with implied off-duty.
             filled_slices: list[SegmentSlice] = []
             cursor = 0
             for section in slices:
                 if section.start_minute > cursor:
-                    gap_minutes = section.start_minute - cursor
-                    filled_slices.append(
-                        SegmentSlice(
-                            log_date=log_date,
-                            segment_type=DutyStatus.OFF_DUTY,
-                            start_time=section.start_time.replace(hour=cursor // 60, minute=cursor % 60),
-                            end_time=section.start_time.replace(
-                                hour=section.start_minute // 60,
-                                minute=section.start_minute % 60,
+                    gap_start = day_start_utc + timedelta(minutes=cursor)
+                    gap_end = section.start_time
+                    gap_minutes = int((gap_end - gap_start).total_seconds() // 60)
+                    if gap_minutes > 0:
+                        filled_slices.append(
+                            SegmentSlice(
+                                log_date=log_date,
+                                segment_type=DutyStatus.OFF_DUTY,
+                                start_time=gap_start,
+                                end_time=gap_end,
+                                duration_minutes=gap_minutes,
+                                start_minute=cursor,
+                                end_minute=section.start_minute,
+                                location_context="Off duty (implied gap)",
+                                notes="Implied off-duty between recorded duty segments.",
                             ),
-                            duration_minutes=gap_minutes,
-                            start_minute=cursor,
-                            end_minute=section.start_minute,
-                            location_context="Off duty (implied gap)",
-                            notes="Implied off-duty between recorded duty segments.",
-                        ),
-                    )
+                        )
                 filled_slices.append(section)
                 cursor = section.end_minute
 
             if cursor < 24 * 60:
-                # Trailing off-duty to midnight.
-                last = slices[-1]
-                gap_minutes = 24 * 60 - cursor
-                filled_slices.append(
-                    SegmentSlice(
-                        log_date=log_date,
-                        segment_type=DutyStatus.OFF_DUTY,
-                        start_time=last.end_time.replace(hour=cursor // 60, minute=cursor % 60),
-                        end_time=last.end_time.replace(hour=23, minute=59),
-                        duration_minutes=gap_minutes,
-                        start_minute=cursor,
-                        end_minute=24 * 60,
-                        location_context="Off duty (implied gap)",
-                        notes="Implied off-duty to end of day.",
-                    ),
-                )
+                day_end_exclusive = day_start_utc + timedelta(days=1)
+                gap_start = day_start_utc + timedelta(minutes=cursor)
+                gap_minutes = int((day_end_exclusive - gap_start).total_seconds() // 60)
+                if gap_minutes > 0:
+                    filled_slices.append(
+                        SegmentSlice(
+                            log_date=log_date,
+                            segment_type=DutyStatus.OFF_DUTY,
+                            start_time=gap_start,
+                            end_time=day_end_exclusive - timedelta(microseconds=1),
+                            duration_minutes=gap_minutes,
+                            start_minute=cursor,
+                            end_minute=24 * 60,
+                            location_context="Off duty (implied gap)",
+                            notes="Implied off-duty to end of day.",
+                        ),
+                    )
 
             slices = filled_slices
             minutes_by_type = defaultdict(int)
@@ -136,21 +157,30 @@ class DailyLogBuilder:
         return logs
 
     def _split_by_day(self, segment: DutySegmentData) -> list[SegmentSlice]:
-        start = segment.start_time
-        end = segment.end_time
+        tz = self._planning_tz()
+        start = self._ensure_aware_utc(segment.start_time)
+        end = self._ensure_aware_utc(segment.end_time)
         slices: list[SegmentSlice] = []
 
         while start < end:
-            day_end = datetime.combine(start.date(), time.max, tzinfo=start.tzinfo) + timedelta(microseconds=1)
-            section_end = min(end, day_end)
+            start_local = start.astimezone(tz)
+            local_date = start_local.date()
+            log_date = local_date.isoformat()
+
+            next_local_midnight = datetime.combine(local_date + timedelta(days=1), time.min, tzinfo=tz)
+            day_end_utc = next_local_midnight.astimezone(dt_timezone.utc)
+
+            section_end = min(end, day_end_utc)
             duration_minutes = int((section_end - start).total_seconds() // 60)
             if duration_minutes <= 0:
                 break
-            start_minute = start.hour * 60 + start.minute
+
+            start_minute = start_local.hour * 60 + start_local.minute
             end_minute = min(24 * 60, start_minute + duration_minutes)
+
             slices.append(
                 SegmentSlice(
-                    log_date=start.date().isoformat(),
+                    log_date=log_date,
                     segment_type=segment.segment_type,
                     start_time=start,
                     end_time=section_end,

@@ -31,6 +31,8 @@ cd frontend && npm install && npm run dev
 
 **Routing:** `ROUTE_PROVIDER=osrm` (default) or `stub` for offline-safe demo routes.
 
+**Time:** `APP_TIMEZONE` sets Django `TIME_ZONE` — daily log `log_date` and local “midnight” splits use this zone; default trip `start_time` is “today at 06:00” in this zone (UTC on Railway unless you change it).
+
 ## API
 
 - `GET /api/health/` — health check  

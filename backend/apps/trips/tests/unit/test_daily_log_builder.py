@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
+import pytest
+from django.test import override_settings
+
 from apps.trips.enums import DutyStatus
 from apps.trips.services.contracts import DutySegmentData
 from apps.trips.services.logs.daily_log_builder import DailyLogBuilder
@@ -51,3 +54,25 @@ def test_daily_log_builder_splits_cross_midnight_segments():
     assert len(logs) == 2
     assert logs[0].driving_hours == Decimal("1.00")
     assert logs[1].driving_hours == Decimal("1.00")
+
+
+@pytest.mark.django_db
+@override_settings(TIME_ZONE="America/New_York")
+def test_daily_log_builder_splits_at_local_midnight_not_utc_midnight():
+    """Jun 15 02:30–06:30 UTC is Jun 14 22:30 – Jun 15 02:30 Eastern; two local calendar days."""
+    builder = DailyLogBuilder()
+    segments = [
+        DutySegmentData(
+            day_index=1,
+            segment_type=DutyStatus.DRIVING,
+            start_time=datetime(2026, 6, 15, 2, 30, tzinfo=timezone.utc),
+            end_time=datetime(2026, 6, 15, 6, 30, tzinfo=timezone.utc),
+            duration_minutes=240,
+            location_context="overnight",
+        ),
+    ]
+
+    logs = builder.build(duty_segments=segments, total_trip_miles=Decimal("240"))
+    assert len(logs) == 2
+    assert logs[0].log_date == "2026-06-14"
+    assert logs[1].log_date == "2026-06-15"

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from decimal import Decimal
 import math
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.trips.constants import (
@@ -164,8 +167,13 @@ class BasicHOSEngine:
         return TripPlanResult(route=route, stops=stops, duty_segments=duty_segments, warnings=warnings)
 
     def _default_start_time(self) -> datetime:
-        now = timezone.now()
-        return now.replace(hour=DEFAULT_SHIFT_START_HOUR, minute=0, second=0, microsecond=0)
+        """Anchor 'today' and default shift start to Django TIME_ZONE (APP_TIMEZONE), stored as UTC."""
+        tz = ZoneInfo(settings.TIME_ZONE)
+        now_local = timezone.now().astimezone(tz)
+        shift_local = now_local.replace(
+            hour=DEFAULT_SHIFT_START_HOUR, minute=0, second=0, microsecond=0
+        )
+        return shift_local.astimezone(dt_timezone.utc)
 
     def _resolve_zero_capacity(
         self,
