@@ -29,7 +29,7 @@ cd frontend && npm install && npm run dev
 
 **UI routes:** `/` — welcome landing; `/planner` — trip form, map, timeline, and daily logs.
 
-**Database:** `DB_BACKEND=sqlite` (default) or `postgres`. For local Postgres: `docker compose -f docker-compose.postgres.yml up -d` and set the `POSTGRES_*` variables from `backend/.env.example`.
+**Database:** `DB_BACKEND=sqlite` (default) or `postgres`. For local Postgres: set `POSTGRES_PASSWORD` (and optionally other `POSTGRES_*` vars) in a **gitignored** `.env` at the repo root or in your shell, then run `docker compose -f docker-compose.postgres.yml up -d`. Match the same values in `backend/.env` when `DB_BACKEND=postgres`. The compose file does not ship a default database password.
 
 **Routing:** `ROUTE_PROVIDER=osrm` (default) or `stub` for offline-safe demo routes.
 
