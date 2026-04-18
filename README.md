@@ -50,6 +50,3 @@ source .venv/bin/activate && cd backend && pytest
 cd frontend && npm run test && npm run build
 ```
 
-## Deployment (sketch)
-
-Deploy the Django app with Postgres (e.g. Railway: service root `backend`, env from `backend/.env.example`, `DB_BACKEND=postgres`, `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` set for your frontend origin). Deploy the Vite app (e.g. Vercel: root `frontend`, `npm run build`, output `dist`) with `VITE_API_BASE_URL=https://<your-api-host>/api` at build time.
